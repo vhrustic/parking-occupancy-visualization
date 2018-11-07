@@ -8,16 +8,27 @@ import { OSM, Vector } from 'ol/source';
 import { Feature } from 'ol';
 import Point from 'ol/geom/Point';
 import { Style, Icon } from 'ol/style';
+import { defaults as defaultControls } from 'ol/control';
 
-import { MAP_CENTER, DEFAULT_VIEW } from './constants';
+import {
+  MAP_CENTER,
+  DEFAULT_VIEW,
+  ZERO_CAR_POSITION,
+  SECOND_COLUMN,
+  THIRD_COLUMN,
+  FOURTH_COLUMN
+} from './constants';
 
-import carIcon from './images/car1.png';
+import carIcon from './images/car3_green.png';
 
 import 'ol/ol.css';
 
 class AnimatedMap extends Component {
   constructor(props) {
     super(props);
+
+    this.carImage = new Image();
+    this.carImage.src = carIcon;
 
     this.center = fromLonLat([MAP_CENTER.LAT, MAP_CENTER.LONG]);
     const rasterLayer = new TileLayer({
@@ -32,36 +43,40 @@ class AnimatedMap extends Component {
         center: this.center,
         zoom: DEFAULT_VIEW.ZOOM,
         rotation: DEFAULT_VIEW.ROTATION
+      }),
+      controls: defaultControls({
+        attributionOptions: {
+          collapsible: false
+        }
       })
     });
   }
 
   getVectorLayerWithIcon = () => {
-    const iconFeature = new Feature({
-      geometry: new Point(transform([MAP_CENTER.LAT, MAP_CENTER.LONG], 'EPSG:4326', 'EPSG:3857')),
-      name: 'The icon',
-      population: 4000,
-      rainfall: 500
-    });
+    let features = [];
+    for (let i = 0; i < THIRD_COLUMN.length; ++i) {
+      const lat = FOURTH_COLUMN[i][0];
+      const long = FOURTH_COLUMN[i][1];
+      console.log(lat, long);
+      const iconFeature = new Feature({
+        geometry: new Point(transform([lat, long], 'EPSG:4326', 'EPSG:3857'))
+      });
 
-    const carImage = new Image();
-    carImage.src = carIcon;
+      const iconStyle = new Style({
+        image: new Icon({
+          img: this.carImage,
+          imgSize: [511, 290],
+          scale: 0.13
+        })
+      });
 
-    const iconStyle = new Style({
-      image: new Icon({
-        anchor: [0.5, 46],
-        anchorXUnits: 'fraction',
-        anchorYUnits: 'pixels',
-        img: carImage,
-        imgSize: [512, 512],
-        scale: 0.1
-      })
-    });
+      iconFeature.setStyle(iconStyle);
 
-    iconFeature.setStyle(iconStyle);
-
+      features.push(iconFeature);
+    }
+    console.log(features);
     const vectorSource = new Vector({
-      features: [iconFeature]
+      features
     });
 
     const vectorLayer = new VectorLayer({
@@ -70,6 +85,40 @@ class AnimatedMap extends Component {
 
     return vectorLayer;
   };
+
+  /*  getVectorLayerWithIcon = () => {
+    let features = [];
+    for (let i = 0; i < 8; ++i) {
+      const lat = ZERO_CAR_POSITION.LAT + i * 0.000006 + 0.00025;
+      const long = ZERO_CAR_POSITION.LONG - i * 0.000058 + 0.00001;
+      console.log(lat, long);
+      const iconFeature = new Feature({
+        geometry: new Point(transform([lat, long], 'EPSG:4326', 'EPSG:3857'))
+      });
+
+      const iconStyle = new Style({
+        image: new Icon({
+          img: this.carImage,
+          imgSize: [511, 290],
+          scale: 0.13
+        })
+      });
+
+      iconFeature.setStyle(iconStyle);
+
+      features.push(iconFeature);
+    }
+    console.log(features);
+    const vectorSource = new Vector({
+      features
+    });
+
+    const vectorLayer = new VectorLayer({
+      source: vectorSource
+    });
+
+    return vectorLayer;
+  }; */
 
   render() {
     return null;

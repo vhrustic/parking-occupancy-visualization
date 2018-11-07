@@ -16,7 +16,8 @@ import {
   ZERO_CAR_POSITION,
   SECOND_COLUMN,
   THIRD_COLUMN,
-  FOURTH_COLUMN
+  FOURTH_COLUMN,
+  FIRST_COLUMN
 } from './constants';
 
 import carIcon from './images/car3_green.png';
@@ -27,6 +28,7 @@ class AnimatedMap extends Component {
   constructor(props) {
     super(props);
 
+    this.history = [];
     this.carImage = new Image();
     this.carImage.src = carIcon;
 
@@ -50,43 +52,53 @@ class AnimatedMap extends Component {
         }
       })
     });
+
+    this.startAnimation();
   }
 
-  getVectorLayerWithIcon = () => {
-    let features = [];
-    for (let i = 0; i < THIRD_COLUMN.length; ++i) {
-      const lat = FOURTH_COLUMN[i][0];
-      const long = FOURTH_COLUMN[i][1];
-      console.log(lat, long);
-      const iconFeature = new Feature({
-        geometry: new Point(transform([lat, long], 'EPSG:4326', 'EPSG:3857'))
-      });
+  startAnimation = () => {
+    const state = [FIRST_COLUMN, SECOND_COLUMN, THIRD_COLUMN, FOURTH_COLUMN];
+    const initialState = this.getNextState(state);
+    this.saveStateInHistory(initialState);
 
-      const iconStyle = new Style({
-        image: new Icon({
-          img: this.carImage,
-          imgSize: [511, 290],
-          scale: 0.13
-        })
-      });
-
-      iconFeature.setStyle(iconStyle);
-
-      features.push(iconFeature);
-    }
-    console.log(features);
-    const vectorSource = new Vector({
-      features
-    });
-
-    const vectorLayer = new VectorLayer({
-      source: vectorSource
-    });
-
-    return vectorLayer;
+    setInterval(this.intervalCallback, 500);
   };
 
-  /*  getVectorLayerWithIcon = () => {
+  intervalCallback = () => {
+    const nextState = this.getNextState(this.history[this.history.length - 1]);
+    // draw nextState on map
+    this.saveStateInHistory(nextState);
+  };
+
+  randomizeCarVisibility = state => {
+    state.forEach(column => {
+      column.forEach(point => {
+        const randomBoolean = Math.random() >= 0.5;
+        point.show = randomBoolean;
+      });
+    });
+  };
+
+  saveStateInHistory = state => {
+    this.history.push(state);
+  };
+
+  getNextState = state => {
+    const newState = this.getStateDeepCopy(state);
+    this.randomizeCarVisibility(newState);
+
+    return newState;
+  };
+
+  getStateDeepCopy = state => {
+    return state.map(column => this.getColumnDeepCopy(column));
+  };
+
+  getColumnDeepCopy = column => {
+    return column.map(point => [...point]);
+  };
+
+  getVectorLayerWithIcon = () => {
     let features = [];
     for (let i = 0; i < 8; ++i) {
       const lat = ZERO_CAR_POSITION.LAT + i * 0.000006 + 0.00025;
@@ -118,7 +130,7 @@ class AnimatedMap extends Component {
     });
 
     return vectorLayer;
-  }; */
+  };
 
   render() {
     return null;

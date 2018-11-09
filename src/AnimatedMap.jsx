@@ -13,7 +13,6 @@ import { defaults as defaultControls } from 'ol/control';
 import {
   MAP_CENTER,
   DEFAULT_VIEW,
-  ZERO_CAR_POSITION,
   SECOND_COLUMN,
   THIRD_COLUMN,
   FOURTH_COLUMN,
@@ -36,11 +35,12 @@ class AnimatedMap extends Component {
     const rasterLayer = new TileLayer({
       source: new OSM()
     });
-    const vectorLayer = this.getVectorLayerWithIcon();
+
+    this.setVectorLayer();
 
     this.map = new Map({
       target: 'map',
-      layers: [rasterLayer, vectorLayer],
+      layers: [rasterLayer, this.vectorLayer],
       view: new View({
         center: this.center,
         zoom: DEFAULT_VIEW.ZOOM,
@@ -59,14 +59,16 @@ class AnimatedMap extends Component {
   startAnimation = () => {
     const state = [FIRST_COLUMN, SECOND_COLUMN, THIRD_COLUMN, FOURTH_COLUMN];
     const initialState = this.getNextState(state);
+
     this.saveStateInHistory(initialState);
 
-    setInterval(this.intervalCallback, 500);
+    setTimeout(this.intervalCallback, 2000);
   };
 
   intervalCallback = () => {
     const nextState = this.getNextState(this.history[this.history.length - 1]);
-    // draw nextState on map
+    const features = this.getStateFeatures(nextState);
+    this.updateVectorFeatures(features);
     this.saveStateInHistory(nextState);
   };
 
@@ -98,38 +100,77 @@ class AnimatedMap extends Component {
     return column.map(point => [...point]);
   };
 
-  getVectorLayerWithIcon = () => {
+  updateVectorFeatures = features => {
+    this.vectorSource.clear();
+    try {
+      features.forEach((feature, i) => {
+        console.log(i, ' ok');
+        this.vectorSource.addFeature(feature);
+      });
+    } catch (e) {
+      console.log(e);
+    }
+    console.log(this.vectorSource.getFeatures());
+  };
+
+  getFeatureWithCar = point => {
+    const iconFeature = new Feature({
+      geometry: new Point(transform([point[0], point[1]], 'EPSG:4326', 'EPSG:3857'))
+    });
+
+    const iconStyle = new Style({
+      image: new Icon({
+        img: this.carImage,
+        imgSize: [511, 290],
+        scale: 0.13
+      })
+    });
+
+    iconFeature.setStyle(iconStyle);
+    console.log('ICON FEATURE', iconFeature);
+    return iconFeature;
+  };
+
+  getColumnFeatures = column => {
     let features = [];
-    for (let i = 0; i < 8; ++i) {
-      const lat = ZERO_CAR_POSITION.LAT + i * 0.000006 + 0.00025;
-      const long = ZERO_CAR_POSITION.LONG - i * 0.000058 + 0.00001;
-      console.log(lat, long);
-      const iconFeature = new Feature({
-        geometry: new Point(transform([lat, long], 'EPSG:4326', 'EPSG:3857'))
-      });
+    console.log('kolona ', column);
+    for (let i = 0; i < column.length; ++i) {
+      const point = column[i];
+      if (point.show) {
+        const iconFeature = this.getFeatureWithCar(point);
+        features.push(iconFeature);
+      }
+    }
+    console.log('COLUMN FEATURES', features);
+    return features;
+  };
 
-      const iconStyle = new Style({
-        image: new Icon({
-          img: this.carImage,
-          imgSize: [511, 290],
-          scale: 0.13
-        })
-      });
+  getStateFeatures = state => {
+    let features = [];
+    state.forEach(column => {
+      const columnFeatures = this.getColumnFeatures(column);
+      features = columnFeatures.concat(columnFeatures);
+    });
+    console.log('STATE FEATURES', features);
+    return features;
+  };
 
-      iconFeature.setStyle(iconStyle);
+  setVectorLayer = () => {
+    let features = [];
+    for (let i = 0; i < FIRST_COLUMN.length; ++i) {
+      const point = FIRST_COLUMN[i];
+      const iconFeature = this.getFeatureWithCar(point);
 
       features.push(iconFeature);
     }
-    console.log(features);
-    const vectorSource = new Vector({
+
+    this.vectorSource = new Vector({
       features
     });
 
-    const vectorLayer = new VectorLayer({
-      source: vectorSource
+    this.vectorLayer = new VectorLayer({
+      source: this.vectorSource
     });
-
-    return vectorLayer;
   };
 
   render() {

@@ -16,7 +16,9 @@ import {
   SECOND_COLUMN,
   THIRD_COLUMN,
   FOURTH_COLUMN,
-  FIRST_COLUMN
+  FIRST_COLUMN,
+  DEFAULT_ANIMATION_SPEED,
+  NUMBER_OF_FRAMES
 } from './constants';
 
 import carIcon from './images/car3_green.png';
@@ -27,15 +29,21 @@ class AnimatedMap extends Component {
   constructor(props) {
     super(props);
 
+    //animation related properties
     this.history = [];
+    this.state = { isAnimationRunning: false, animationSpeed: 1, currentFrame: 0 };
+
+    this.id = 0;
     this.carImage = new Image();
     this.carImage.src = carIcon;
 
     this.center = fromLonLat([MAP_CENTER.LAT, MAP_CENTER.LONG]);
+  }
+
+  componentDidMount() {
     const rasterLayer = new TileLayer({
       source: new OSM()
     });
-
     this.setVectorLayer();
 
     this.map = new Map({
@@ -53,29 +61,51 @@ class AnimatedMap extends Component {
       })
     });
 
+    this.generateAnimationHistory();
+
     this.startAnimation();
   }
 
-  startAnimation = () => {
-    const state = [FIRST_COLUMN, SECOND_COLUMN, THIRD_COLUMN, FOURTH_COLUMN];
-    const initialState = this.getNextState(state);
-
-    this.saveStateInHistory(initialState);
-
-    setTimeout(this.intervalCallback, 2000);
+  generateAnimationHistory = () => {
+    for (let i = 0; i < NUMBER_OF_FRAMES - 1; ++i) {
+      const oldState = this.history[i];
+      const newState = this.getNextState(oldState);
+      this.saveStateInHistory(newState);
+    }
   };
 
-  intervalCallback = () => {
-    const nextState = this.getNextState(this.history[this.history.length - 1]);
-    const features = this.getStateFeatures(nextState);
-    this.updateVectorFeatures(features);
-    this.saveStateInHistory(nextState);
+  startAnimation = () => {
+    setTimeout(this.timeoutCallback, 0);
+  };
+
+  timeoutCallback = () => {
+    if (!this.state.isAnimationRunning) {
+      return;
+    }
+
+    this.setState(
+      prevState => ({ currentFrame: prevState.currentFrame + 1 }),
+      () => {
+        if (this.state.currentFrame === this.history.length) {
+          return this.setState({ isAnimationRunning: false });
+        }
+        if (this.state.currentFrame === this.history.length) {
+          return this.setState({ isAnimationRunning: false });
+        }
+
+        const nextState = this.history[this.state.currentFrame];
+        const features = this.getStateFeatures(nextState);
+        this.updateVectorFeatures(features);
+      }
+    );
+
+    setTimeout(this.timeoutCallback, DEFAULT_ANIMATION_SPEED / this.state.animationSpeed);
   };
 
   randomizeCarVisibility = state => {
     state.forEach(column => {
       column.forEach(point => {
-        const randomBoolean = Math.random() >= 0.5;
+        const randomBoolean = Math.random() >= 0.3;
         point.show = randomBoolean;
       });
     });
@@ -102,15 +132,7 @@ class AnimatedMap extends Component {
 
   updateVectorFeatures = features => {
     this.vectorSource.clear();
-    try {
-      features.forEach((feature, i) => {
-        console.log(i, ' ok');
-        this.vectorSource.addFeature(feature);
-      });
-    } catch (e) {
-      console.log(e);
-    }
-    console.log(this.vectorSource.getFeatures());
+    features.forEach(feature => this.vectorSource.addFeature(feature));
   };
 
   getFeatureWithCar = point => {
@@ -127,13 +149,13 @@ class AnimatedMap extends Component {
     });
 
     iconFeature.setStyle(iconStyle);
-    console.log('ICON FEATURE', iconFeature);
+    iconFeature.setId(this.id++);
+
     return iconFeature;
   };
 
   getColumnFeatures = column => {
     let features = [];
-    console.log('kolona ', column);
     for (let i = 0; i < column.length; ++i) {
       const point = column[i];
       if (point.show) {
@@ -141,7 +163,6 @@ class AnimatedMap extends Component {
         features.push(iconFeature);
       }
     }
-    console.log('COLUMN FEATURES', features);
     return features;
   };
 
@@ -149,20 +170,25 @@ class AnimatedMap extends Component {
     let features = [];
     state.forEach(column => {
       const columnFeatures = this.getColumnFeatures(column);
-      features = columnFeatures.concat(columnFeatures);
+      features = features.concat(columnFeatures);
     });
-    console.log('STATE FEATURES', features);
     return features;
   };
 
   setVectorLayer = () => {
+    const initialState = [FIRST_COLUMN, SECOND_COLUMN, THIRD_COLUMN, FOURTH_COLUMN];
+    this.randomizeCarVisibility(initialState);
+    this.saveStateInHistory(initialState);
     let features = [];
-    for (let i = 0; i < FIRST_COLUMN.length; ++i) {
-      const point = FIRST_COLUMN[i];
-      const iconFeature = this.getFeatureWithCar(point);
+    initialState.forEach(column => {
+      column.forEach(point => {
+        if (point.show) {
+          const iconFeature = this.getFeatureWithCar(point);
 
-      features.push(iconFeature);
-    }
+          features.push(iconFeature);
+        }
+      });
+    });
 
     this.vectorSource = new Vector({
       features
@@ -173,8 +199,75 @@ class AnimatedMap extends Component {
     });
   };
 
+  playAnimation = () => {
+    this.setState({ isAnimationRunning: true }, this.startAnimation);
+  };
+
+  pauseAnimation = () => {
+    this.setState({ isAnimationRunning: false });
+  };
+
+  stopAnimation = isReplay => {
+    this.pauseAnimation();
+    this.setState({ currentFrame: 0 });
+    if (isReplay) {
+      this.setState({ isAnimationRunning: true }, () => {
+        this.startAnimation();
+      });
+    }
+  };
+
+  changeAnimationSpeed = () => {
+    const { animationSpeed } = this.state;
+    const newSpeed = animationSpeed + 1 > 3 ? 1 : animationSpeed + 1;
+
+    this.setState({ animationSpeed: newSpeed });
+  };
+
+  handleSilderChange = event => {
+    console.log(event);
+    console.log('promjena');
+  };
+
   render() {
-    return null;
+    const { isAnimationRunning, animationSpeed } = this.state;
+    console.log(this.state);
+    return (
+      <>
+        <div className="animation-actions">
+          <button
+            onClick={this.playAnimation}
+            disabled={isAnimationRunning || this.state.currentFrame === this.history.length}
+          >
+            Play
+          </button>
+          <button onClick={this.pauseAnimation} disabled={!isAnimationRunning}>
+            Pause
+          </button>
+          <button
+            onClick={() => this.stopAnimation(this.state.currentFrame >= this.history.length)}
+            disabled={!isAnimationRunning && this.state.currentFrame < this.history.length}
+          >
+            {this.state.currentFrame < this.history.length ? 'Stop' : 'Replay'}
+          </button>
+          <button onClick={this.changeAnimationSpeed}>{`${animationSpeed}x`}</button>
+          <span className="frame-counter">
+            Frame: {`${this.state.currentFrame}/${this.history.length}`}
+          </span>
+        </div>
+        <div className="slider-container">
+          <input
+            type="range"
+            min="0"
+            max={NUMBER_OF_FRAMES}
+            value={this.state.currentFrame}
+            onChange={this.handleSilderChange}
+            className="slider"
+            id="myRange"
+          />
+        </div>
+      </>
+    );
   }
 }
 

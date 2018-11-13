@@ -62,44 +62,58 @@ class AnimatedMap extends Component {
     });
 
     this.generateAnimationHistory();
-
-    this.startAnimation();
   }
 
   generateAnimationHistory = () => {
+    const initialState = [FIRST_COLUMN, SECOND_COLUMN, THIRD_COLUMN, FOURTH_COLUMN];
+
+    this.randomizeCarVisibility(initialState);
+    this.saveStateInHistory(initialState);
+
     for (let i = 0; i < NUMBER_OF_FRAMES - 1; ++i) {
       const oldState = this.history[i];
       const newState = this.getNextState(oldState);
       this.saveStateInHistory(newState);
     }
+    this.forceUpdate();
   };
 
   startAnimation = () => {
-    setTimeout(this.timeoutCallback, 0);
+    this.timeout = setTimeout(this.zeroTimeoutCallback, 0);
+  };
+
+  zeroTimeoutCallback = () => {
+    const nextState = this.history[this.state.currentFrame];
+    const features = this.getStateFeatures(nextState);
+    this.updateVectorFeatures(features);
+
+    this.timeout = setTimeout(
+      this.timeoutCallback,
+      DEFAULT_ANIMATION_SPEED / this.state.animationSpeed
+    );
   };
 
   timeoutCallback = () => {
     if (!this.state.isAnimationRunning) {
       return;
     }
-
     this.setState(
       prevState => ({ currentFrame: prevState.currentFrame + 1 }),
       () => {
-        if (this.state.currentFrame === this.history.length) {
-          return this.setState({ isAnimationRunning: false });
-        }
-        if (this.state.currentFrame === this.history.length) {
+        if (this.state.currentFrame >= this.history.length - 1) {
           return this.setState({ isAnimationRunning: false });
         }
 
         const nextState = this.history[this.state.currentFrame];
         const features = this.getStateFeatures(nextState);
         this.updateVectorFeatures(features);
+
+        this.timeout = setTimeout(
+          this.timeoutCallback,
+          DEFAULT_ANIMATION_SPEED / this.state.animationSpeed
+        );
       }
     );
-
-    setTimeout(this.timeoutCallback, DEFAULT_ANIMATION_SPEED / this.state.animationSpeed);
   };
 
   randomizeCarVisibility = state => {
@@ -176,22 +190,8 @@ class AnimatedMap extends Component {
   };
 
   setVectorLayer = () => {
-    const initialState = [FIRST_COLUMN, SECOND_COLUMN, THIRD_COLUMN, FOURTH_COLUMN];
-    this.randomizeCarVisibility(initialState);
-    this.saveStateInHistory(initialState);
-    let features = [];
-    initialState.forEach(column => {
-      column.forEach(point => {
-        if (point.show) {
-          const iconFeature = this.getFeatureWithCar(point);
-
-          features.push(iconFeature);
-        }
-      });
-    });
-
     this.vectorSource = new Vector({
-      features
+      features: []
     });
 
     this.vectorLayer = new VectorLayer({
@@ -204,17 +204,20 @@ class AnimatedMap extends Component {
   };
 
   pauseAnimation = () => {
+    clearTimeout(this.timeout);
     this.setState({ isAnimationRunning: false });
   };
 
   stopAnimation = isReplay => {
-    this.pauseAnimation();
-    this.setState({ currentFrame: 0 });
+    clearTimeout(this.timeout);
     if (isReplay) {
-      this.setState({ isAnimationRunning: true }, () => {
+      return this.setState({ isAnimationRunning: true, currentFrame: 0 }, () => {
         this.startAnimation();
       });
     }
+    this.setState({ currentFrame: 0 });
+    this.vectorSource.clear();
+    this.pauseAnimation();
   };
 
   changeAnimationSpeed = () => {
@@ -225,19 +228,37 @@ class AnimatedMap extends Component {
   };
 
   handleSilderChange = event => {
-    console.log(event);
-    console.log('promjena');
+    const value = parseInt(event.target.value, 10);
+    this.setState({ currentFrame: value }, () => {
+      if (this.state.isAnimationRunning) {
+        clearTimeout(this.timeout);
+        this.timeout = setTimeout(
+          this.timeoutCallback,
+          DEFAULT_ANIMATION_SPEED / this.state.animationSpeed
+        );
+      }
+      const nextState = this.history[this.state.currentFrame];
+      const features = this.getStateFeatures(nextState);
+      this.updateVectorFeatures(features);
+    });
+  };
+
+  getFrameDisplay = () => {
+    const { currentFrame } = this.state;
+    const frame = currentFrame > this.history.length ? this.history.length : currentFrame + 1;
+
+    return <span className="frame-counter">Frame: {`${frame}/${this.history.length}`}</span>;
   };
 
   render() {
-    const { isAnimationRunning, animationSpeed } = this.state;
-    console.log(this.state);
+    const { isAnimationRunning, animationSpeed, currentFrame } = this.state;
+    const frameDisplay = this.getFrameDisplay();
     return (
       <>
         <div className="animation-actions">
           <button
             onClick={this.playAnimation}
-            disabled={isAnimationRunning || this.state.currentFrame === this.history.length}
+            disabled={isAnimationRunning || currentFrame >= this.history.length - 1}
           >
             Play
           </button>
@@ -245,22 +266,20 @@ class AnimatedMap extends Component {
             Pause
           </button>
           <button
-            onClick={() => this.stopAnimation(this.state.currentFrame >= this.history.length)}
-            disabled={!isAnimationRunning && this.state.currentFrame < this.history.length}
+            onClick={() => this.stopAnimation(currentFrame >= this.history.length - 1)}
+            disabled={!isAnimationRunning && currentFrame < this.history.length - 1}
           >
-            {this.state.currentFrame < this.history.length ? 'Stop' : 'Replay'}
+            {currentFrame < this.history.length - 1 ? 'Stop' : 'Replay'}
           </button>
           <button onClick={this.changeAnimationSpeed}>{`${animationSpeed}x`}</button>
-          <span className="frame-counter">
-            Frame: {`${this.state.currentFrame}/${this.history.length}`}
-          </span>
+          {frameDisplay}
         </div>
         <div className="slider-container">
           <input
             type="range"
             min="0"
-            max={NUMBER_OF_FRAMES}
-            value={this.state.currentFrame}
+            max={NUMBER_OF_FRAMES - 1}
+            value={currentFrame}
             onChange={this.handleSilderChange}
             className="slider"
             id="myRange"

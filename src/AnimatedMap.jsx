@@ -21,7 +21,13 @@ import {
   NUMBER_OF_FRAMES
 } from './constants';
 
-import carIcon from './images/car3_green.png';
+import blackCar from './images/car2_black.png';
+import blueCar from './images/car2_blue.png';
+import redCar from './images/car2_red.png';
+import greenCar from './images/car3_green.png';
+import metalicCar from './images/car3_metalic.png';
+import pinkCar from './images/car3_pink.png';
+import yellowCar from './images/car3_yellow.png';
 
 import 'ol/ol.css';
 
@@ -32,12 +38,21 @@ class AnimatedMap extends Component {
     //animation related properties
     this.history = [];
     this.state = { isAnimationRunning: false, animationSpeed: 1, currentFrame: 0 };
-
+    this.carImages = this.getCarIcons();
     this.id = 0;
-    this.carImage = new Image();
-    this.carImage.src = carIcon;
 
     this.center = fromLonLat([MAP_CENTER.LAT, MAP_CENTER.LONG]);
+  }
+
+  getCarIcons() {
+    const carImages = [blackCar, blueCar, redCar, greenCar, metalicCar, pinkCar, yellowCar];
+    const carImagesObjects = [];
+    carImages.forEach(carImage => {
+      const image = new Image();
+      image.src = carImage;
+      carImagesObjects.push(image);
+    });
+    return carImagesObjects;
   }
 
   componentDidMount() {
@@ -97,7 +112,6 @@ class AnimatedMap extends Component {
     if (!this.state.isAnimationRunning) {
       return;
     }
-    console.log(this.state.currentFrame);
     this.setState(
       prevState => ({ currentFrame: prevState.currentFrame + 1 }),
       () => {
@@ -152,16 +166,24 @@ class AnimatedMap extends Component {
     features.forEach(feature => this.vectorSource.addFeature(feature));
   };
 
+  getRandomCarImage = () => {
+    const randNumber = Math.floor(Math.random() * this.carImages.length);
+    return this.carImages[randNumber];
+  };
+
   getFeatureWithCar = point => {
     const iconFeature = new Feature({
       geometry: new Point(transform([point[0], point[1]], 'EPSG:4326', 'EPSG:3857'))
     });
 
+    const image = this.getRandomCarImage();
+
     const iconStyle = new Style({
       image: new Icon({
-        img: this.carImage,
+        img: image,
         imgSize: [511, 290],
-        scale: 0.13
+        scale: 0.13,
+        rotation: [0, Math.PI][Math.floor(Math.random() * 2)]
       })
     });
 

@@ -21,13 +21,11 @@ import {
   NUMBER_OF_FRAMES
 } from './constants';
 
-import blackCar from './images/car2_black.png';
-import blueCar from './images/car2_blue.png';
-import redCar from './images/car2_red.png';
-import greenCar from './images/car3_green.png';
-import metalicCar from './images/car3_metalic.png';
-import pinkCar from './images/car3_pink.png';
-import yellowCar from './images/car3_yellow.png';
+import carPickup from './images/car_pickup.png';
+import redCar from './images/car_red.png';
+import greenCar from './images/car_green.png';
+import carOrange from './images/car_orange.png';
+import yellowCar from './images/car_yellow.png';
 
 import 'ol/ol.css';
 
@@ -45,7 +43,7 @@ class AnimatedMap extends Component {
   }
 
   getCarIcons() {
-    const carImages = [blackCar, blueCar, redCar, greenCar, metalicCar, pinkCar, yellowCar];
+    const carImages = [carPickup, redCar, greenCar, carOrange, yellowCar];
     const carImagesObjects = [];
     carImages.forEach(carImage => {
       const image = new Image();
@@ -181,8 +179,8 @@ class AnimatedMap extends Component {
     const iconStyle = new Style({
       image: new Icon({
         img: image,
-        imgSize: [511, 290],
-        scale: 0.13,
+        imgSize: [511, 200],
+        scale: 0.175,
         rotation: [0, Math.PI][Math.floor(Math.random() * 2)]
       })
     });

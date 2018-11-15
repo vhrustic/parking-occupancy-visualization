@@ -192,6 +192,7 @@ class AnimatedMap extends Component {
 
     const iconStyle = new Style({
       image: new Icon({
+        anchor: point.rotation === 0 ? [0.4, 0.5] : [0.5, 0.5],
         img: this.carImages[point.imageIndex],
         imgSize: [511, 200],
         scale: 0.175,

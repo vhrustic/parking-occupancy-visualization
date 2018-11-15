@@ -54,6 +54,6 @@ export const FOURTH_COLUMN = [
   [18.3977806, 43.8543108]
 ];
 
-export const NUMBER_OF_FRAMES = 10;
+export const NUMBER_OF_FRAMES = 30;
 
 export const DEFAULT_ANIMATION_SPEED = 2000;

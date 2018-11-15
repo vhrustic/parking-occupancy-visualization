@@ -26,14 +26,6 @@ code {
 
 .animation-actions button {
   margin-left: 10px;
-  height: 36px;
-  font-size: 15px;
-}
-
-button:disabled {
-  background-color: #bbbbbb;
-  color: #00000024;
-  cursor: not-allowed;
 }
 
 .slider {
@@ -54,7 +46,7 @@ button:disabled {
   width: 25px;
   height: 25px;
   border-radius: 50%;
-  background: #5a5aff;
+  background: #56a7ff;
   cursor: pointer;
 }
 
@@ -62,7 +54,7 @@ button:disabled {
   width: 25px;
   height: 25px;
   border-radius: 50%;
-  background: #5a5aff;
+  background: #56a7ff;
   cursor: pointer;
 }
 
@@ -74,4 +66,8 @@ button:disabled {
 
 .frame-counter {
   margin-left: 100px;
+}
+
+i.fa {
+  margin-right: 5px;
 }

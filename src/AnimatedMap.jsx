@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { Button } from 'reactstrap';
 import Map from 'ol/Map';
 import View from 'ol/View';
 import { fromLonLat, transform } from 'ol/proj';
@@ -308,22 +309,37 @@ class AnimatedMap extends Component {
     return (
       <>
         <div className="animation-actions">
-          <button
+          <Button
+            outline
+            color="primary"
             onClick={this.playAnimation}
             disabled={isAnimationRunning || currentFrame >= this.history.length - 1}
           >
+            <i className="fa fa-play" />
             Play
-          </button>
-          <button onClick={this.pauseAnimation} disabled={!isAnimationRunning}>
+          </Button>
+          <Button outline color="info" onClick={this.pauseAnimation} disabled={!isAnimationRunning}>
+            <i className="fa fa-pause" />
             Pause
-          </button>
-          <button
+          </Button>
+          <Button
+            outline
+            color="secondary"
             onClick={() => this.stopAnimation(currentFrame >= this.history.length - 1)}
             disabled={!isAnimationRunning && currentFrame < this.history.length - 1}
           >
+            <i
+              className={`fa ${
+                currentFrame < this.history.length - 1 ? 'fa-stop-circle' : 'fa-play-circle'
+              }`}
+            />
             {currentFrame < this.history.length - 1 ? 'Stop' : 'Replay'}
-          </button>
-          <button onClick={this.changeAnimationSpeed}>{`${animationSpeed}x`}</button>
+          </Button>
+          <Button
+            outline
+            color="success"
+            onClick={this.changeAnimationSpeed}
+          >{`Speed: ${animationSpeed}x`}</Button>
           {frameDisplay}
         </div>
         <div className="slider-container">

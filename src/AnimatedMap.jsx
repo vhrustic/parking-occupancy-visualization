@@ -132,8 +132,8 @@ class AnimatedMap extends Component {
   };
 
   randomizeCarVisibility = state => {
-    state.forEach(column => {
-      column.forEach(point => {
+    state.forEach((column, i) => {
+      column.forEach((point, j) => {
         let randomBoolean = null;
         const currentHour = this.history.length;
         switch (true) {
@@ -149,13 +149,22 @@ class AnimatedMap extends Component {
           case currentHour < 0.75 * NUMBER_OF_FRAMES:
             randomBoolean = Math.random() >= 0.2;
             break;
+          case currentHour < 0.91 * NUMBER_OF_FRAMES:
+            randomBoolean = Math.random() >= 0.5;
+            break;
           default:
             randomBoolean = Math.random() >= 0.85;
         }
         point.show = randomBoolean;
         if (point.show) {
-          point.rotation = [0, Math.PI][Math.floor(Math.random() * 2)];
-          point.imageIndex = Math.floor(Math.random() * this.carImages.length);
+          const prevHourParking = this.history[currentHour - 1];
+          if (prevHourParking && prevHourParking[i][j].show) {
+            point.rotation = prevHourParking[i][j].rotation;
+            point.imageIndex = prevHourParking[i][j].imageIndex;
+          } else {
+            point.rotation = [0, Math.PI][Math.floor(Math.random() * 2)];
+            point.imageIndex = Math.floor(Math.random() * this.carImages.length);
+          }
         }
       });
     });

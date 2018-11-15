@@ -134,8 +134,29 @@ class AnimatedMap extends Component {
   randomizeCarVisibility = state => {
     state.forEach(column => {
       column.forEach(point => {
-        const randomBoolean = Math.random() >= 0.3;
+        let randomBoolean = null;
+        const currentHour = this.history.length;
+        switch (true) {
+          case currentHour < 0.18 * NUMBER_OF_FRAMES:
+            randomBoolean = Math.random() >= 0.75;
+            break;
+          case currentHour < 0.25 * NUMBER_OF_FRAMES:
+            randomBoolean = Math.random() >= 0.55;
+            break;
+          case currentHour < 0.6 * NUMBER_OF_FRAMES:
+            randomBoolean = Math.random() >= 0.1;
+            break;
+          case currentHour < 0.75 * NUMBER_OF_FRAMES:
+            randomBoolean = Math.random() >= 0.2;
+            break;
+          default:
+            randomBoolean = Math.random() >= 0.85;
+        }
         point.show = randomBoolean;
+        if (point.show) {
+          point.rotation = [0, Math.PI][Math.floor(Math.random() * 2)];
+          point.imageIndex = Math.floor(Math.random() * this.carImages.length);
+        }
       });
     });
   };
@@ -164,24 +185,17 @@ class AnimatedMap extends Component {
     features.forEach(feature => this.vectorSource.addFeature(feature));
   };
 
-  getRandomCarImage = () => {
-    const randNumber = Math.floor(Math.random() * this.carImages.length);
-    return this.carImages[randNumber];
-  };
-
   getFeatureWithCar = point => {
     const iconFeature = new Feature({
       geometry: new Point(transform([point[0], point[1]], 'EPSG:4326', 'EPSG:3857'))
     });
 
-    const image = this.getRandomCarImage();
-
     const iconStyle = new Style({
       image: new Icon({
-        img: image,
+        img: this.carImages[point.imageIndex],
         imgSize: [511, 200],
         scale: 0.175,
-        rotation: [0, Math.PI][Math.floor(Math.random() * 2)]
+        rotation: point.rotation
       })
     });
 

@@ -11,16 +11,7 @@ import Point from 'ol/geom/Point';
 import { Style, Icon } from 'ol/style';
 import { defaults as defaultControls } from 'ol/control';
 
-import {
-  MAP_CENTER,
-  DEFAULT_VIEW,
-  SECOND_COLUMN,
-  THIRD_COLUMN,
-  FOURTH_COLUMN,
-  FIRST_COLUMN,
-  DEFAULT_ANIMATION_SPEED,
-  NUMBER_OF_FRAMES
-} from './constants';
+import { MAP_CENTER, DEFAULT_VIEW, DEFAULT_ANIMATION_SPEED, NUMBER_OF_FRAMES } from './constants';
 
 import carPickup from './images/car_pickup.png';
 import redCar from './images/car_red.png';
@@ -75,22 +66,14 @@ class AnimatedMap extends Component {
       })
     });
 
-    this.generateAnimationHistory();
+    fetch('http://localhost:5000/parking/history')
+      .then(response => response.json())
+      .then(data => {
+        this.history = data.data;
+        console.log(this.history.length);
+        this.forceUpdate();
+      });
   }
-
-  generateAnimationHistory = () => {
-    const initialState = [FIRST_COLUMN, SECOND_COLUMN, THIRD_COLUMN, FOURTH_COLUMN];
-
-    this.randomizeCarVisibility(initialState);
-    this.saveStateInHistory(initialState);
-
-    for (let i = 0; i < NUMBER_OF_FRAMES - 1; ++i) {
-      const oldState = this.history[i];
-      const newState = this.getNextState(oldState);
-      this.saveStateInHistory(newState);
-    }
-    this.forceUpdate();
-  };
 
   startAnimation = () => {
     this.timeout = setTimeout(this.zeroTimeoutCallback, 0);
@@ -132,64 +115,6 @@ class AnimatedMap extends Component {
     );
   };
 
-  randomizeCarVisibility = state => {
-    state.forEach((column, i) => {
-      column.forEach((point, j) => {
-        let randomBoolean = null;
-        const currentHour = this.history.length;
-        switch (true) {
-          case currentHour < 0.18 * NUMBER_OF_FRAMES:
-            randomBoolean = Math.random() >= 0.75;
-            break;
-          case currentHour < 0.25 * NUMBER_OF_FRAMES:
-            randomBoolean = Math.random() >= 0.55;
-            break;
-          case currentHour < 0.6 * NUMBER_OF_FRAMES:
-            randomBoolean = Math.random() >= 0.1;
-            break;
-          case currentHour < 0.75 * NUMBER_OF_FRAMES:
-            randomBoolean = Math.random() >= 0.2;
-            break;
-          case currentHour < 0.91 * NUMBER_OF_FRAMES:
-            randomBoolean = Math.random() >= 0.5;
-            break;
-          default:
-            randomBoolean = Math.random() >= 0.85;
-        }
-        point.show = randomBoolean;
-        if (point.show) {
-          const prevHourParking = this.history[currentHour - 1];
-          if (prevHourParking && prevHourParking[i][j].show) {
-            point.rotation = prevHourParking[i][j].rotation;
-            point.imageIndex = prevHourParking[i][j].imageIndex;
-          } else {
-            point.rotation = [0, Math.PI][Math.floor(Math.random() * 2)];
-            point.imageIndex = Math.floor(Math.random() * this.carImages.length);
-          }
-        }
-      });
-    });
-  };
-
-  saveStateInHistory = state => {
-    this.history.push(state);
-  };
-
-  getNextState = state => {
-    const newState = this.getStateDeepCopy(state);
-    this.randomizeCarVisibility(newState);
-
-    return newState;
-  };
-
-  getStateDeepCopy = state => {
-    return state.map(column => this.getColumnDeepCopy(column));
-  };
-
-  getColumnDeepCopy = column => {
-    return column.map(point => [...point]);
-  };
-
   updateVectorFeatures = features => {
     this.vectorSource.clear();
     features.forEach(feature => this.vectorSource.addFeature(feature));
@@ -202,11 +127,11 @@ class AnimatedMap extends Component {
 
     const iconStyle = new Style({
       image: new Icon({
-        anchor: point.rotation === 0 ? [0.4, 0.5] : [0.5, 0.5],
-        img: this.carImages[point.imageIndex],
+        anchor: point[3] === 0 ? [0.4, 0.5] : [0.5, 0.5],
+        img: this.carImages[point[4]],
         imgSize: [511, 200],
         scale: 0.175,
-        rotation: point.rotation
+        rotation: point[3]
       })
     });
 
@@ -220,7 +145,7 @@ class AnimatedMap extends Component {
     let features = [];
     for (let i = 0; i < column.length; ++i) {
       const point = column[i];
-      if (point.show) {
+      if (point[2]) {
         const iconFeature = this.getFeatureWithCar(point);
         features.push(iconFeature);
       }
